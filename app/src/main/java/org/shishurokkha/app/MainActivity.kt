@@ -79,13 +79,13 @@ class MainActivity : Activity() {
             emailInput = EditText(this).apply {
                 hint = "Email address"
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-                singleLine = true
+                isSingleLine = true
                 setTextColor(ink)
             }
             passwordInput = EditText(this).apply {
                 hint = "Password (at least 6 characters)"
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-                singleLine = true
+                isSingleLine = true
                 setTextColor(ink)
             }
             root.addView(emailInput, match())
@@ -94,10 +94,6 @@ class MainActivity : Activity() {
             root.addView(authPanel, match())
             signedInPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             root.addView(signedInPanel, match())
-            addAuthButton("Create parent account") { register() }
-            addAuthButton("Sign in") { signIn() }
-            addAuthButton("Reset password") { resetPassword() }
-            addAuthButton("Sign out") { signOut() }
             refreshAuthUi()
             addButton("Set up usage access", "Opens the Android system settings") {
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
