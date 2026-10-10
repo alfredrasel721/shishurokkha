@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.graphics.Color
+import com.google.firebase.FirebaseApp
 
 class MainActivity : Activity() {
     private val teal = Color.rgb(13, 148, 136)
@@ -18,9 +19,19 @@ class MainActivity : Activity() {
     private val muted = Color.rgb(91, 111, 121)
     private lateinit var root: LinearLayout
     private lateinit var status: TextView
+    private var firebaseStatus = "Not initialized"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        firebaseStatus = try {
+            if (FirebaseApp.initializeApp(this) != null) {
+                "SDK initialized; sign-in and sync are not implemented yet"
+            } else {
+                "Configuration not found"
+            }
+        } catch (error: Exception) {
+            "Initialization failed (${error.javaClass.simpleName})"
+        }
         render()
     }
 
@@ -58,19 +69,19 @@ class MainActivity : Activity() {
             addButton("Set up usage access", "Open Android Usage Access settings") {
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             }
-            addButton("Pair a child device", "Pairing will be enabled after the cloud backend is configured") {
-                info("Cloud pairing is not connected yet. Configure Firebase and deploy the backend first.")
+            addButton("Pair a child device", "Pairing will be enabled after the cloud backend is implemented") {
+                info("Firebase SDK setup is being connected. Secure cloud pairing is not implemented yet.")
             }
             addButton("Open safety setup checklist", "Review the required production setup") {
-                info("Next: configure Firebase, implement authenticated pairing, then test usage reporting on real devices.")
+                info("Next: implement sign-in, secure authenticated pairing, Firestore security rules, then test usage reporting on real devices.")
             }
         } else {
             addButton("Review setup and permissions", "No monitoring is enabled silently") {
-                info("Pairing and child-device protections are not active until the cloud backend and explicit setup flow are implemented.")
+                info("Firebase SDK setup is being connected. Pairing and child-device protections are not active until the cloud backend and explicit setup flow are implemented.")
             }
         }
         addText("IMPORTANT", 12f, teal, true, 0, 18)
-        addText("This is a real native Android build foundation, not a finished parental-control service. Cloud pairing, remote commands, app blocking, location sharing and reporting are not active in this starter. No data is collected or sent to a server.", 14f, muted, false, 0, 10)
+        addText("Firebase SDK initialization does not mean accounts, pairing, monitoring, or cloud sync are active. This starter does not send usage data to a server. Any future collection must be disclosed, permission-based, securely authorised, and revocable.", 14f, muted, false, 0, 10)
     }
 
     private fun updateStatus() {
@@ -79,7 +90,7 @@ class MainActivity : Activity() {
             @Suppress("DEPRECATION")
             ops.checkOpNoThrow("android:get_usage_stats", android.os.Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED
         } catch (_: Exception) { false }
-        status.text = "Build role: ${BuildConfig.APP_ROLE}\nUsage access: ${if (enabled) "Granted" else "Not granted"}\nCloud connection: Not configured"
+        status.text = "Build role: ${BuildConfig.APP_ROLE}\nUsage access: ${if (enabled) "Granted" else "Not granted"}\nFirebase setup: $firebaseStatus"
     }
 
     private fun addText(value: String, size: Float, color: Int, bold: Boolean, top: Int, bottom: Int) {
