@@ -1,0 +1,11 @@
+name = "shishurokkha-pairing-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-11"
+
+[vars]
+FIREBASE_PROJECT_ID = "shishurokkha"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shishurokkha-pairing"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
