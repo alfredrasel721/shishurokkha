@@ -1,0 +1,13 @@
+{
+  "name": "shishurokkha-pairing-api",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Separate Cloudflare Worker backend for ShishuRokkha secure pairing",
+  "scripts": {
+    "typecheck": "tsc --noEmit --target ES2022 --module ESNext --lib ES2022,DOM --types @cloudflare/workers-types src/index.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260601.0",
+    "typescript": "^5.9.3"
+  }
+}
