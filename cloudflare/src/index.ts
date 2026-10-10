@@ -115,11 +115,13 @@ async function verifyFirebaseToken(request: Request, env: Env): Promise<Firebase
     false,
     ["verify"],
   );
+  const signatureBuffer = new Uint8Array(base64UrlBytes(parts[2])).buffer as ArrayBuffer;
+  const signedPayloadBuffer = new TextEncoder().encode(`${parts[0]}.${parts[1]}`).buffer as ArrayBuffer;
   const valid = await crypto.subtle.verify(
     "RSASSA-PKCS1-v1_5",
     publicKey,
-    base64UrlBytes(parts[2]),
-    new TextEncoder().encode(`${parts[0]}.${parts[1]}`),
+    signatureBuffer,
+    signedPayloadBuffer,
   );
   if (!valid) throw new Response("Invalid authentication signature", { status: 401 });
   return claims;
