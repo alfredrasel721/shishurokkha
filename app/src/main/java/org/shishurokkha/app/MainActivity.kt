@@ -7,11 +7,15 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
+import android.graphics.Color
+import android.text.InputType
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.graphics.Color
 import com.google.firebase.FirebaseApp
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : Activity() {
     private val teal = Color.rgb(13, 148, 136)
@@ -20,15 +24,19 @@ class MainActivity : Activity() {
     private lateinit var root: LinearLayout
     private lateinit var status: TextView
     private var firebaseStatus = "Not initialized"
+    private var auth: FirebaseAuth? = null
+    private lateinit var emailInput: EditText
+    private lateinit var passwordInput: EditText
+    private lateinit var authPanel: LinearLayout
+    private lateinit var signedInPanel: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         firebaseStatus = try {
             if (FirebaseApp.initializeApp(this) != null) {
-                "SDK initialized; sign-in and sync are not implemented yet"
-            } else {
-                "Configuration not found"
-            }
+                auth = FirebaseAuth.getInstance()
+                "Connected to Firebase SDK"
+            } else "Configuration not found"
         } catch (error: Exception) {
             "Initialization failed (${error.javaClass.simpleName})"
         }
@@ -66,22 +74,161 @@ class MainActivity : Activity() {
         updateStatus()
 
         if (BuildConfig.APP_ROLE == "parent") {
-            addButton("Set up usage access", "Open Android Usage Access settings") {
+            addText("Parent account", 20f, ink, true, 20, 8)
+            addText("Create an account or sign in. Use an email address you can access because Firebase may send password-reset emails.", 14f, muted, false, 0, 12)
+            emailInput = EditText(this).apply {
+                hint = "Email address"
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                singleLine = true
+                setTextColor(ink)
+            }
+            passwordInput = EditText(this).apply {
+                hint = "Password (at least 6 characters)"
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+                singleLine = true
+                setTextColor(ink)
+            }
+            root.addView(emailInput, match())
+            root.addView(passwordInput, match())
+            authPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            root.addView(authPanel, match())
+            signedInPanel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            root.addView(signedInPanel, match())
+            addAuthButton("Create parent account") { register() }
+            addAuthButton("Sign in") { signIn() }
+            addAuthButton("Reset password") { resetPassword() }
+            addAuthButton("Sign out") { signOut() }
+            refreshAuthUi()
+            addButton("Set up usage access", "Opens the Android system settings") {
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             }
-            addButton("Pair a child device", "Pairing will be enabled after the cloud backend is implemented") {
-                info("Firebase SDK setup is being connected. Secure cloud pairing is not implemented yet.")
-            }
-            addButton("Open safety setup checklist", "Review the required production setup") {
-                info("Next: implement sign-in, secure authenticated pairing, Firestore security rules, then test usage reporting on real devices.")
-            }
         } else {
-            addButton("Review setup and permissions", "No monitoring is enabled silently") {
-                info("Firebase SDK setup is being connected. Pairing and child-device protections are not active until the cloud backend and explicit setup flow are implemented.")
-            }
+            addText("Child device setup", 20f, ink, true, 20, 8)
+            addText("The child account and secure parent pairing flow are not implemented yet. This app does not silently monitor or upload activity.", 14f, muted, false, 0, 12)
         }
-        addText("IMPORTANT", 12f, teal, true, 0, 18)
-        addText("Firebase SDK initialization does not mean accounts, pairing, monitoring, or cloud sync are active. This starter does not send usage data to a server. Any future collection must be disclosed, permission-based, securely authorised, and revocable.", 14f, muted, false, 0, 10)
+
+        addText("What works today", 12f, teal, true, 20, 8)
+        addText("Parent email/password account creation, sign-in, password reset and sign-out use Firebase Authentication. Secure child pairing, Firestore family data, usage reports, blocking, location sharing and push alerts are not active yet.", 14f, muted, false, 0, 10)
+    }
+
+    private fun register() {
+        val email = emailInput.text.toString().trim()
+        val password = passwordInput.text.toString()
+        if (!validateCredentials(email, password, true)) return
+        setBusy(true)
+        auth?.createUserWithEmailAndPassword(email, password)
+            ?.addOnCompleteListener(this) { task ->
+                setBusy(false)
+                if (task.isSuccessful) {
+                    showMessage("Account created", "Your parent account was created successfully. Keep your password private.")
+                } else showAuthError(task.exception)
+                refreshAuthUi()
+            } ?: showMessage("Firebase unavailable", "Firebase Authentication could not be initialized.")
+    }
+
+    private fun signIn() {
+        val email = emailInput.text.toString().trim()
+        val password = passwordInput.text.toString()
+        if (!validateCredentials(email, password, false)) return
+        setBusy(true)
+        auth?.signInWithEmailAndPassword(email, password)
+            ?.addOnCompleteListener(this) { task ->
+                setBusy(false)
+                if (task.isSuccessful) showMessage("Signed in", "You are signed in. Family pairing is a separate feature and is not active yet.")
+                else showAuthError(task.exception)
+                refreshAuthUi()
+            } ?: showMessage("Firebase unavailable", "Firebase Authentication could not be initialized.")
+    }
+
+    private fun resetPassword() {
+        val email = emailInput.text.toString().trim()
+        if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            showMessage("Enter your email", "Type the email address for your account first.")
+            return
+        }
+        setBusy(true)
+        auth?.sendPasswordResetEmail(email)?.addOnCompleteListener(this) { task ->
+            setBusy(false)
+            if (task.isSuccessful) showMessage("Check your email", "If Firebase accepts this address, a password-reset email will be sent.")
+            else showAuthError(task.exception)
+        } ?: showMessage("Firebase unavailable", "Firebase Authentication could not be initialized.")
+    }
+
+    private fun signOut() {
+        auth?.signOut()
+        refreshAuthUi()
+        showMessage("Signed out", "This parent app is now signed out.")
+    }
+
+    private fun validateCredentials(email: String, password: String, creating: Boolean): Boolean {
+        if (email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            showMessage("Check email", "Enter a valid email address.")
+            return false
+        }
+        if (password.length < 6) {
+            showMessage("Check password", if (creating) "Use at least 6 characters for the password." else "Enter your password (at least 6 characters).")
+            return false
+        }
+        return true
+    }
+
+    private fun setBusy(busy: Boolean) {
+        if (::authPanel.isInitialized) {
+            for (i in 0 until authPanel.childCount) authPanel.getChildAt(i).isEnabled = !busy
+        }
+        if (::emailInput.isInitialized) emailInput.isEnabled = !busy
+        if (::passwordInput.isInitialized) passwordInput.isEnabled = !busy
+    }
+
+    private fun refreshAuthUi() {
+        if (!::authPanel.isInitialized || !::signedInPanel.isInitialized) return
+        authPanel.removeAllViews()
+        signedInPanel.removeAllViews()
+        val user = auth?.currentUser
+        if (user == null) {
+            authPanel.addView(makeAction("Create parent account") { register() }, match())
+            authPanel.addView(makeAction("Sign in") { signIn() }, match())
+            authPanel.addView(makeAction("Reset password") { resetPassword() }, match())
+        } else {
+            signedInPanel.addView(TextView(this).apply {
+                text = "Signed in as ${user.email ?: "parent"}"
+                textSize = 14f
+                setTextColor(ink)
+                setPadding(0, dp(12), 0, dp(8))
+            }, match())
+            signedInPanel.addView(makeAction("Sign out") { signOut() }, match())
+        }
+    }
+
+    private fun makeAction(title: String, action: () -> Unit): TextView =
+        TextView(this).apply {
+            text = title
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            setPadding(dp(16), dp(13), dp(16), dp(13))
+            setBackgroundColor(teal)
+            setOnClickListener {
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager)
+                    .hideSoftInputFromWindow(windowToken, 0)
+                action()
+            }
+            val p = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            p.bottomMargin = dp(9)
+            layoutParams = p
+        }
+
+    private fun showAuthError(error: Exception?) {
+        val message = when (error) {
+            is com.google.firebase.auth.FirebaseAuthUserCollisionException -> "An account already exists for this email. Try signing in instead."
+            is com.google.firebase.auth.FirebaseAuthWeakPasswordException -> "Firebase rejected the password. Choose a stronger password."
+            is com.google.firebase.auth.FirebaseAuthInvalidCredentialsException -> "The email or password is invalid. Check them and try again."
+            else -> error?.localizedMessage ?: "The request failed. Check internet access and Firebase Authentication settings."
+        }
+        showMessage("Authentication failed", message)
+    }
+
+    private fun showMessage(title: String, message: String) {
+        android.app.AlertDialog.Builder(this).setTitle(title).setMessage(message).setPositiveButton("OK", null).show()
     }
 
     private fun updateStatus() {
@@ -90,7 +237,8 @@ class MainActivity : Activity() {
             @Suppress("DEPRECATION")
             ops.checkOpNoThrow("android:get_usage_stats", android.os.Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED
         } catch (_: Exception) { false }
-        status.text = "Build role: ${BuildConfig.APP_ROLE}\nUsage access: ${if (enabled) "Granted" else "Not granted"}\nFirebase setup: $firebaseStatus"
+        val signedIn = if (BuildConfig.APP_ROLE == "parent" && auth?.currentUser != null) "Yes" else "No"
+        status.text = "Build role: ${BuildConfig.APP_ROLE}\nUsage access: ${if (enabled) "Granted" else "Not granted"}\nFirebase setup: $firebaseStatus\nParent signed in: $signedIn"
     }
 
     private fun addText(value: String, size: Float, color: Int, bold: Boolean, top: Int, bottom: Int) {
@@ -110,23 +258,18 @@ class MainActivity : Activity() {
             setPadding(dp(16), dp(13), dp(16), dp(13))
             setBackgroundColor(Color.WHITE)
         }
-        val heading = TextView(this).apply {
+        box.addView(TextView(this).apply {
             text = title; textSize = 16f; setTextColor(ink)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
-        }
-        val detail = TextView(this).apply {
+        })
+        box.addView(TextView(this).apply {
             text = subtitle; textSize = 12f; setTextColor(muted); setPadding(0, dp(5), 0, 0)
-        }
-        box.addView(heading)
-        box.addView(detail)
+        })
         box.setOnClickListener { action() }
         val p = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         p.bottomMargin = dp(10)
         root.addView(box, p)
     }
-
-    private fun info(message: String) =
-        android.app.AlertDialog.Builder(this).setTitle("ShishuRokkha").setMessage(message).setPositiveButton("OK", null).show()
 
     private fun match() = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
