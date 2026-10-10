@@ -211,23 +211,24 @@ async function redeemPairing(request: Request, env: Env): Promise<Response> {
 
   const now = Math.floor(Date.now() / 1000);
   const codeHash = await sha256(code);
+  const redemptionId = crypto.randomUUID();
   const results = await env.DB.batch([
     env.DB.prepare(
       `UPDATE pairing_codes
-       SET consumed_at = ?, consumed_by_child_uid = ?
+       SET consumed_at = ?, consumed_by_child_uid = ?, consumed_request_id = ?
        WHERE code_hash = ? AND consumed_at IS NULL AND expires_at > ?
        AND NOT EXISTS (
          SELECT 1 FROM family_links WHERE child_uid = ? AND revoked_at IS NULL
        )`,
-    ).bind(now, claims.sub, codeHash, now, claims.sub),
+    ).bind(now, claims.sub, redemptionId, codeHash, now, claims.sub),
     env.DB.prepare(
       `INSERT INTO family_links(child_uid, parent_uid, linked_at, revoked_at)
        SELECT ?, parent_uid, ?, NULL FROM pairing_codes
-       WHERE code_hash = ? AND consumed_by_child_uid = ? AND consumed_at = ?
+       WHERE code_hash = ? AND consumed_by_child_uid = ? AND consumed_request_id = ?
        ON CONFLICT(child_uid) DO UPDATE SET
          parent_uid = excluded.parent_uid, linked_at = excluded.linked_at, revoked_at = NULL
        WHERE family_links.revoked_at IS NOT NULL`,
-    ).bind(claims.sub, now, codeHash, claims.sub, now),
+    ).bind(claims.sub, now, codeHash, claims.sub, redemptionId),
   ]);
 
   const changed = Number(results[0]?.meta?.changes ?? 0);
