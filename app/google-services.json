@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "195058286576",
+    "project_id": "shishurokkha",
+    "storage_bucket": "shishurokkha.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:195058286576:android:7d53f572d6820165daa735",
+        "android_client_info": {
+          "package_name": "org.shishurokkha.app.child"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcXS0NoSEiGLho8mQmEH5VMYWTU4h6-A0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:195058286576:android:f31a77b93e17065fdaa735",
+        "android_client_info": {
+          "package_name": "org.shishurokkha.app.parent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcXS0NoSEiGLho8mQmEH5VMYWTU4h6-A0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
