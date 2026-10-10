@@ -8,4 +8,4 @@ FIREBASE_PROJECT_ID = "shishurokkha"
 [[d1_databases]]
 binding = "DB"
 database_name = "shishurokkha-pairing"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "10376fb3-a4d6-4d7d-b525-7dfc47ae1672"
