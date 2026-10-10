@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS pairing_codes (
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL,
   consumed_at INTEGER,
-  consumed_by_child_uid TEXT
+  consumed_by_child_uid TEXT,
+  consumed_request_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_pairing_codes_parent
