@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install isolated type-check tools
-        run: npm install --no-save --legacy-peer-deps typescript @cloudflare/workers-types
+      - name: Install backend-only dependencies
+        run: npm install --no-audit --no-fund
       - name: Type-check Worker
-        run: npx tsc --noEmit --target ES2022 --module ESNext --lib ES2022,DOM --types @cloudflare/workers-types src/index.ts
+        run: npm run typecheck
