@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS pairing_codes (
   code_hash TEXT PRIMARY KEY,
   parent_uid TEXT NOT NULL,
