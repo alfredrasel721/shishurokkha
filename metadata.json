@@ -1,0 +1,6 @@
+{
+  "name": "ShishuRokkha - Bangladeshi Parental Safety Suite",
+  "description": "Top-notch parental control app tailored for Bangladeshi families featuring prayer lockouts, study mode, bKash/Nagad wallet protection, live coaching geofence radar, and bilingual Bangla/English controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
