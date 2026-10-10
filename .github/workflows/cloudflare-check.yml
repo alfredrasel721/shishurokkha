@@ -1,0 +1,30 @@
+name: Check ShishuRokkha Cloudflare backend
+
+on:
+  push:
+    paths:
+      - "cloudflare/**"
+      - ".github/workflows/cloudflare-check.yml"
+  pull_request:
+    paths:
+      - "cloudflare/**"
+      - ".github/workflows/cloudflare-check.yml"
+  workflow_dispatch:
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cloudflare
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install type-check tools
+        run: npm install --no-save typescript @cloudflare/workers-types
+      - name: Type-check Worker
+        run: npx tsc --noEmit --target ES2022 --module ESNext --lib ES2022,DOM --types @cloudflare/workers-types src/index.ts
